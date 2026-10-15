@@ -35,7 +35,7 @@ npm run dev
 
 ## Deploying to Vercel
 
-1. In Vercel (team `digital-transformation-office`), **Add New → Project** and import `DTO-Sapphire/devfin-mbe-training`. The framework is detected as Next.js.
+1. In Vercel (team `digital-transformation-office`), **Add New → Project** and import `Saphire-Virtual-Network-Limited/devfin-mbe-training-simulation`. The framework is detected as Next.js.
 2. **Storage → Neon**: add a database to the project. That sets `DATABASE_URL`. Then run `npm run migrate` once with that URL in `.env.local` (`vercel env pull .env.local` fetches it).
 3. **Settings → Environment Variables**, for Production and Preview. Mark the secrets as *Sensitive*:
    - `SESSION_SECRET`: output of `openssl rand -base64 48` (Sensitive)
