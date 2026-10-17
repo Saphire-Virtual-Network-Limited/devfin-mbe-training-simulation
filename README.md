@@ -89,12 +89,23 @@ These come from one recorded application and live in `src/sim/data.ts`:
 - Monthly repayment uses a flat 11% per month (matches ₦75,920 → ₦21,005 × 6).
 - Tenure is 6 months only.
 - All 7 readiness items must be ticked before continuing.
-- The device list holds only the TECNO models seen in the recording. Pickup stores are fictional.
+- Pickup stores are fictional.
+
+## Device catalogue
+
+`src/sim/devices.ts` holds every active model from the DevFin device export (501 models, 16 brands), with brands in the order and spelling of the live "Choose a brand" screen. To refresh it from a new export:
+
+```bash
+python3 scripts/build-devices.py path/to/devfin-devices.csv /tmp/devices.js src/sim/devices.ts
+npm test   # checks brand counts and that every scenario's customer can afford their phone
+```
+
+If the live brand screen changes, update the brand order in `scripts/build-devices.py` and the expected counts in `src/sim/catalogue.test.ts`.
 
 ## Tests
 
 ```bash
-npm test     # 56 unit and API tests: offer maths, scoring, attempt validation, code/phone
+npm test     # 60 unit and API tests: device catalogue vs the live brand screen, offer maths, scoring, attempt validation, code/phone
              # cleaning, MBE list import, session signing, sign-in, trainer passcode,
              # lockout, switched-off MBEs, roster permissions, cross-site blocking
 npm run lint

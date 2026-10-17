@@ -1,5 +1,6 @@
-import { FEMALE, MALE } from "./data";
-import { digits, fmtPhoneIntl, phoneNum, pick, type Customer } from "./customer";
+import { ADMIN_FEE, FEMALE, MALE } from "./data";
+import { BRANDS, deviceLabel, devicesIn } from "./catalogue";
+import { digits, fmtPhoneIntl, phoneNum, pick, rint, type Customer } from "./customer";
 
 export type EventId = "collect_now" | "pay_pending" | "gtb_down" | "cash_50" | "spouse" | "ref_no" | "sweep_stuck";
 
@@ -21,9 +22,11 @@ export const SCENARIOS: readonly Scenario[] = [
     id: "smooth", title: "Smooth application", level: "Starter",
     brief: "A ready customer. Fill every step accurately and handle the questions customers usually ask.",
     setup(c) {
+      const d = pick(devicesIn(85000, 150000));
+      c.wants = d.id;
       c.downWanted = 30000;
-      c.cash = 45000;
-      c.says.push(`I'd like to pay ${naira(30000)} as down payment so the monthly is lower.`);
+      c.cash = 30000 + ADMIN_FEE + rint(2, 10) * 1000;
+      c.says.push(`I want the ${deviceLabel(d)}. I'd like to pay ${naira(30000)} as down payment so the monthly is lower.`);
     },
     events: ["collect_now"],
   },
@@ -73,10 +76,14 @@ export const SCENARIOS: readonly Scenario[] = [
     id: "budget", title: "Phone above budget", level: "Core",
     brief: "The customer wants a phone they may not be able to afford today.",
     setup(c) {
-      c.wants = "vflip";
-      c.fallback = "camon17";
+      // A brand with both a premium phone and an everyday one the customer can afford.
+      const brand = pick(BRANDS.map((b) => b.key).filter((k) => devicesIn(600000, Infinity, k).length && devicesIn(85000, 200000, k).length));
+      const big = pick(devicesIn(600000, Infinity, brand));
+      const small = pick(devicesIn(85000, 200000, brand));
+      c.wants = big.id;
+      c.fallback = small.id;
       c.cash = 60000;
-      c.says.push(`I want the Phantom V Flip. I have ${naira(60000)} on me today. If the Flip is too much, the Camon 17 is fine.`);
+      c.says.push(`I want the ${deviceLabel(big)}. I have ${naira(60000)} on me today. If that's too much, the ${deviceLabel(small)} is fine.`);
     },
     events: [],
   },

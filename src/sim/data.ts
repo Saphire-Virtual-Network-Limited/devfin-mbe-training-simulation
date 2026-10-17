@@ -64,18 +64,11 @@ export const STATES = [
 
 export interface Device {
   id: string;
+  /** Brand key as exported, e.g. "TECNO". Display label comes from BRANDS. */
+  brand: string;
   name: string;
   price: number;
 }
-
-/** TECNO models and prices seen in the app on 14 Oct 2026. */
-export const DEVICES: readonly Device[] = [
-  { id: "camon17", name: "CAMON 17 (128GB+4GB)", price: 94900 },
-  { id: "vflip", name: "PHANTOM V FLIP (8GB+256GB)", price: 783600 },
-  { id: "vflip2", name: "PHANTOM V FLIP 2 (8GB+256GB)", price: 1053300 },
-  { id: "vfold", name: "PHANTOM V FOLD (12GB+512GB)", price: 1075000 },
-  { id: "vfold2", name: "PHANTOM V FOLD 2 (12GB+512GB)", price: 1799400 },
-];
 
 export const ADMIN_FEE = 11000;
 /** ASSUMPTION: flat 11% per month, matched to one recorded offer (₦75,920 → ₦21,005 × 6). */

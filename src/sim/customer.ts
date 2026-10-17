@@ -1,4 +1,5 @@
 import { FEMALE, MALE, PHONE_PREFIXES, STORES, STREETS, SURNAMES } from "./data";
+import { devicesIn, payNowFor } from "./catalogue";
 
 /** Every customer is generated. Never put a real person's details here. */
 
@@ -54,6 +55,7 @@ export interface Customer {
   accounts: Account[];
   refs: Referee[];
   backupRef: Referee;
+  /** Device id the customer asks for. */
   wants: string;
   fallback: string | null;
   cash: number;
@@ -91,6 +93,8 @@ export function makeCustomer(): Customer {
       : pick(["Tailor", "Provisions shop owner", "Hairdresser", "POS agent", "Food vendor", "Phone repairer"]);
   const bank = pick(["Access Bank", "GT Bank", "First Bank", "Zenith Bank", "UBA", "Fidelity Bank", "Wema Bank"]);
   const phone = phoneNum();
+  // Most customers want an everyday phone and bring enough for its minimum deposit.
+  const want = pick(devicesIn(85000, 200000));
 
   const refs: Referee[] = ["Family", "Friend", "Colleague"].map((rel) => ({
     name: `${pick(pick([MALE, FEMALE]))} ${pick(SURNAMES)}`,
@@ -123,9 +127,9 @@ export function makeCustomer(): Customer {
     accounts: [{ bank, acct: "0" + digits(9), holder: `${last} ${first} ${middle}`.toUpperCase(), own: true, primary: true }],
     refs,
     backupRef: { name: `${pick(pick([MALE, FEMALE]))} ${pick(SURNAMES)}`, phone: phoneNum(), rel: "Friend" },
-    wants: "camon17",
+    wants: want.id,
     fallback: null,
-    cash: 45000,
+    cash: Math.ceil((payNowFor(want) + rint(3, 30) * 1000) / 1000) * 1000,
     downWanted: null,
     ready: [true, true, true, true, true, true, true],
     says: [],

@@ -9,7 +9,8 @@
  * Every value written into innerHTML goes through esc(). Customer data is
  * generated, but form input is typed by the MBE, so it is treated as untrusted.
  */
-import { ADMIN_FEE, BANKS, DEVICES, MONTHS, PS_BANK, PS_LIST, READY, STATES, STEPS, STORES, TIPS } from "./data";
+import { ADMIN_FEE, BANKS, MONTHS, PS_BANK, PS_LIST, READY, STATES, STEPS, STORES, TIPS } from "./data";
+import { BRANDS, DEVICES, brandLabel, deviceById, deviceLabel } from "./catalogue";
 import { makeCustomer, pick, rint, type Customer } from "./customer";
 import { EVENTS, SCENARIOS, type EventId, type Scenario } from "./scenarios";
 import { CRITICAL_PENALTY, isPassed, minDown, offerFor, PASS_MARK, scoreFrom, type Mistake, type MistakeCode, type Offer } from "./scoring";
@@ -68,6 +69,9 @@ interface Run {
   form: Record<string, string | boolean>;
   errs: Record<string, string | null>;
   device: string | null;
+  /** Brand chosen on the "Choose a brand" screen; null shows the brand list. */
+  brand: string | null;
+  payLink: string | null;
   offer: Offer | null;
   code: string | null;
   lied: number[];
@@ -131,7 +135,6 @@ const fmtWhen = (t: string | number) => {
     return "";
   }
 };
-const deviceById = (id: string) => DEVICES.find((d) => d.id === id) ?? DEVICES[0];
 const storeById = (id: string) => STORES.find((s) => s.id === id) ?? STORES[0];
 
 export function mountSimulator(host: HTMLElement, opts: SimOptions): () => void {
@@ -183,7 +186,7 @@ export function mountSimulator(host: HTMLElement, opts: SimOptions): () => void 
     scen.setup(c);
     S.run = {
       scen, c, step: 1, sub: null, started: Date.now(), log: [], critical: [], vUsed: {}, form: {}, errs: {},
-      device: null, offer: null, code: null, lied: [], eventsDone: {}, idState: null, acctState: null, timers: [],
+      device: null, brand: null, payLink: null, offer: null, code: null, lied: [], eventsDone: {}, idState: null, acctState: null, timers: [],
       payRefresh: 0, refStatus: null, mandate: "NOT STARTED", sweep: "NOT STARTED", sweepRefresh: 0, mf: {},
       store: null, storeQ: "", ended: false,
     };
@@ -345,7 +348,7 @@ export function mountSimulator(host: HTMLElement, opts: SimOptions): () => void 
         <div class="doc"><span class="h">Bank app (BVN shown in profile)</span>${row("BVN", c.bvn, true)}${accts}</div>
         <div class="doc"><span class="h">Contact and background</span>${row("Phone in use", c.phone, true)}${row("Email", c.email)}${row("Lives at", `${c.address}, ${c.state}`)}${row("Marital status", c.marital)}${row("Schooling", c.schooling)}${row("Work", `${c.employment} · ${c.job}`)}${row("Monthly income", naira(c.income))}</div>
         <div class="doc"><span class="h">Referees from the customer's contacts</span>${refs}</div>
-        <div class="doc"><span class="h">What they want</span>${row("Phone", `TECNO ${dev.name}`)}${row("Cash available today", naira(c.cash))}${row("Collect near", c.area)}</div>
+        <div class="doc"><span class="h">What they want</span>${row("Phone", deviceLabel(dev))}${row("Cash available today", naira(c.cash))}${row("Collect near", c.area)}</div>
       </div>`,
       false,
     );
@@ -469,10 +472,29 @@ export function mountSimulator(host: HTMLElement, opts: SimOptions): () => void 
           <button class="btn sim" data-act="s1stop">Customer isn't ready: stop here</button>`;
       }
       case 2: {
+        if (!r.brand) {
+          const qb = String(r.form.bq ?? "").toLowerCase();
+          const brands = BRANDS.filter((b) => b.label.toLowerCase().includes(qb));
+          return `<h2>Choose a brand</h2><p class="muted small">Pick a brand to see its available models and pricing.</p>
+          <button class="btn link backlink" data-act="s2back">‹ Back</button>
+          <div class="field"><input id="f_bq" data-f="bq" value="${esc(r.form.bq ?? "")}" placeholder="Search ${BRANDS.length} brands…" aria-label="Search brands"></div>
+          <div class="stack10">${
+            brands
+              .map((b) => {
+                const ds = DEVICES.filter((d) => d.brand === b.key);
+                const lo = Math.min(...ds.map((d) => d.price));
+                return `<button class="opt" data-brand="${b.key}"><span><b class="brandname">${esc(b.label)}</b><br><span class="muted num">${ds.length} model${ds.length === 1 ? "" : "s"} from NGN ${lo.toLocaleString("en-NG")}</span></span><span class="chev" aria-hidden="true">›</span></button>`;
+              })
+              .join("") || `<p class="muted small">No brands match.</p>`
+          }</div>`;
+        }
+        const label = brandLabel(r.brand);
+        const all = DEVICES.filter((d) => d.brand === r.brand);
         const qy = String(r.form.dq ?? "").toLowerCase();
-        const list = DEVICES.filter((d) => d.name.toLowerCase().includes(qy));
-        return `<h2>TECNO</h2><p class="muted small">Pick the model you'd like to finance. Pricing and minimum down payment update as you select.</p>
-          <div class="field"><input id="f_dq" data-f="dq" value="${esc(r.form.dq ?? "")}" placeholder="Search ${DEVICES.length} TECNO models…" aria-label="Search models"></div>
+        const list = all.filter((d) => d.name.toLowerCase().includes(qy));
+        return `<h2>${esc(label)}</h2><p class="muted small">Pick the model you'd like to finance. Pricing and minimum down payment update as you select.</p>
+          <button class="btn link backlink" data-act="allbrands">‹ All brands</button>
+          <div class="field"><input id="f_dq" data-f="dq" value="${esc(r.form.dq ?? "")}" placeholder="Search ${all.length} ${esc(label)} model${all.length === 1 ? "" : "s"}…" aria-label="Search models"></div>
           <div class="stack10">${
             list
               .map(
@@ -575,12 +597,20 @@ export function mountSimulator(host: HTMLElement, opts: SimOptions): () => void 
 
   function step5() {
     const r = run();
+    r.payLink ??= "https://checkout.paystack.com/" + Math.random().toString(36).slice(2, 14);
     const o = r.offer as Offer;
     return `<h2>Down payment</h2><p class="muted small">Complete your down payment within 30 minutes to lock in this offer.</p>
       <div class="card"><dl class="kv"><dt>Amount due</dt><dd class="big">${naira(o.totalNow)}</dd><dt>Payment method</dt><dd>Card, bank transfer, or USSD</dd></dl></div>
-      ${r.payPending ? `<p class="small center">This is taking longer than it should. Tap Refresh status to check again. If nothing changes after a few minutes, message Sapphire support on WhatsApp. Your progress is saved.</p>` : ""}
+      ${
+        r.payPending
+          ? `<p class="small center">This is taking longer than it should. Tap Refresh status to check again. If nothing changes after a few minutes, message Sapphire support on WhatsApp. Your progress is saved.</p>`
+          : r.payOpened
+            ? `<p class="small muted center">Waiting for your payment to be confirmed…</p>`
+            : ""
+      }
       <button class="btn" data-act="s5pay">Pay now</button>
       <div class="note info">🛡 <div><b>Secure checkout.</b> This opens in a new tab. We never see or store card details. Once done, come back to this tab and we'll pick up the payment automatically.</div></div>
+      <div class="card"><b>Payment link</b><span class="mono small breakall paylink">${esc(r.payLink)}</span><span class="small muted">Practice link. Share it with the customer if the payment tab didn't open.</span></div>
       ${r.payOpened ? `<button class="btn link" data-act="s5newlink">Link not working? Get a new one</button><button class="btn ghost" data-act="s5refresh">Refresh status</button>` : ""}`;
   }
 
@@ -657,7 +687,7 @@ export function mountSimulator(host: HTMLElement, opts: SimOptions): () => void 
       <div class="card centered"><canvas id="qr" width="200" height="200" aria-label="Practice QR code (not scannable)"></canvas>
         <span class="small muted">PICKUP CODE (IF QR WON'T SCAN)</span><span class="mono breakall">${esc(r.pickupCode)}</span>
         <span class="tag sim">Practice code, not scannable</span></div>
-      <div class="card"><dl class="kv"><dt>Device</dt><dd>TECNO ${esc(d.name)}</dd><dt>Device price</dt><dd>${naira(d.price)}</dd><dt>Loan amount</dt><dd>${naira(o.loan)}</dd><dt>Tenure</dt><dd>${o.tenure} months</dd><dt>Monthly repayment</dt><dd class="big">${naira(o.monthly)}</dd></dl></div>
+      <div class="card"><dl class="kv"><dt>Device</dt><dd>${esc(deviceLabel(d))}</dd><dt>Device price</dt><dd>${naira(d.price)}</dd><dt>Loan amount</dt><dd>${naira(o.loan)}</dd><dt>Tenure</dt><dd>${o.tenure} months</dd><dt>Monthly repayment</dt><dd class="big">${naira(o.monthly)}</dd></dl></div>
       <div class="card"><dl class="kv"><dt>Store</dt><dd>${esc(st.name)}</dd><dt>Location</dt><dd>${esc(st.loc)}</dd></dl></div>
       <button class="btn sim" data-act="finish">Finish and see my score</button>`;
   }
@@ -693,6 +723,7 @@ export function mountSimulator(host: HTMLElement, opts: SimOptions): () => void 
       if (!key) return;
       r.form[key] = el.type === "checkbox" ? el.checked : el.value;
       if (r.step === 2 && key === "dq") rerenderKeep("f_dq");
+      if (r.step === 2 && key === "bq") rerenderKeep("f_bq");
       if (r.step === 8 && key === "storeQ") {
         r.storeQ = el.value;
         r.store = null;
@@ -704,8 +735,15 @@ export function mountSimulator(host: HTMLElement, opts: SimOptions): () => void 
     app.oninput = onInput;
     app.onchange = onInput;
     app.onclick = (e) => {
-      const b = (e.target as HTMLElement).closest<HTMLElement>("[data-act],[data-dev],[data-store]");
+      const b = (e.target as HTMLElement).closest<HTMLElement>("[data-act],[data-dev],[data-store],[data-brand]");
       if (!b) return;
+      if (b.dataset.brand) {
+        r.brand = b.dataset.brand;
+        r.form.dq = "";
+        render();
+        window.scrollTo(0, 0);
+        return;
+      }
       if (b.dataset.dev) {
         r.form.dev = b.dataset.dev;
         rerenderKeep();
@@ -845,6 +883,12 @@ export function mountSimulator(host: HTMLElement, opts: SimOptions): () => void 
         endRun("Correctly stopped: customer not ready", true);
       };
     },
+    s2back: () => goStep(1),
+    allbrands: () => {
+      run().brand = null;
+      render();
+      window.scrollTo(0, 0);
+    },
     s2go: () => {
       const r = run();
       if (!r.form.dev) {
@@ -855,7 +899,7 @@ export function mountSimulator(host: HTMLElement, opts: SimOptions): () => void 
       }
       r.device = String(r.form.dev);
       const okIds = [r.c.wants, r.c.fallback].filter(Boolean);
-      if (!okIds.includes(r.device)) penal("DEVICE", 5, `Picked ${deviceById(r.device).name}; the customer asked for ${deviceById(r.c.wants).name}.`);
+      if (!okIds.includes(r.device)) penal("DEVICE", 5, `Picked ${deviceLabel(deviceById(r.device))}; the customer asked for ${deviceLabel(deviceById(r.c.wants))}.`);
       if (!r.step3done) goStep(3);
       else {
         makeOffer();
@@ -935,7 +979,11 @@ export function mountSimulator(host: HTMLElement, opts: SimOptions): () => void 
       goStep(5);
     },
     s5pay: () => payNow(),
-    s5newlink: () => toast("New payment link generated"),
+    s5newlink: () => {
+      run().payLink = null;
+      toast("New payment link generated");
+      rerenderKeep();
+    },
     s5refresh: () => {
       const r = run();
       if (!r.payPending) {
