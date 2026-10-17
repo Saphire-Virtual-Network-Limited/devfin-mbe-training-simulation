@@ -7,15 +7,15 @@ import type { SessionUser } from "./auth/token";
 /** Generous ceiling that stops a runaway script, not a keen trainee. */
 export const DAILY_ATTEMPT_LIMIT = 300;
 
-export async function attemptsToday(traineeId: string): Promise<number> {
+export async function attemptsToday(mbeCode: string): Promise<number> {
   const rows = (await sql()`
-    SELECT count(*)::int AS n FROM attempts WHERE trainee_id = ${traineeId} AND created_at > now() - interval '1 day'`) as { n: number }[];
+    SELECT count(*)::int AS n FROM attempts WHERE mbe_code = ${mbeCode} AND created_at > now() - interval '1 day'`) as { n: number }[];
   return rows[0]?.n ?? 0;
 }
 
 export async function insertAttempt(user: SessionUser, a: ScoredAttempt): Promise<void> {
   await sql()`
-    INSERT INTO attempts (trainee_id, scenario_id, title, level, mode, score, passed, completed, reached,
+    INSERT INTO attempts (mbe_code, scenario_id, title, level, mode, score, passed, completed, reached,
                           duration_sec, end_reason, mistakes, critical, is_demo)
     VALUES (${user.id}, ${a.scenarioId}, ${a.title}, ${a.level}, ${a.mode}, ${a.score}, ${a.passed}, ${a.completed},
             ${a.reached}, ${a.durationSec}, ${a.endReason}, ${JSON.stringify(a.mistakes)}::jsonb,
@@ -34,10 +34,10 @@ interface AttemptRow {
   created_at: string;
 }
 
-export async function listOwnAttempts(traineeId: string, limit = 200): Promise<SavedAttempt[]> {
+export async function listOwnAttempts(mbeCode: string, limit = 200): Promise<SavedAttempt[]> {
   const rows = (await sql()`
     SELECT id::text, scenario_id, title, mode, score, passed, critical, duration_sec, created_at
-    FROM attempts WHERE trainee_id = ${traineeId}
+    FROM attempts WHERE mbe_code = ${mbeCode}
     ORDER BY created_at DESC LIMIT ${limit}`) as AttemptRow[];
   return rows.map((r) => ({
     id: r.id,

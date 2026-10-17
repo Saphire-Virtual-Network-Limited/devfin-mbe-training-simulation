@@ -1,4 +1,4 @@
-// Prints a scrypt hash for DEMO_LOGIN_PASSWORD_HASH.
+// Prints a scrypt hash for TRAINER_PASSCODE_HASH.
 // Usage: npm run hash-password
 // The password is read from a hidden prompt, so it never lands in shell history.
 import { randomBytes, scrypt } from "node:crypto";
@@ -20,7 +20,7 @@ function ask(question) {
   });
 }
 
-const password = process.env.PASSWORD ?? (await ask("Demo password (min 12 characters): "));
+const password = process.env.PASSWORD ?? (await ask("Trainer passcode (min 12 characters): "));
 if (password.length < 12) {
   console.error("Use at least 12 characters.");
   process.exit(1);

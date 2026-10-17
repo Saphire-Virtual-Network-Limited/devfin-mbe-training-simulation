@@ -1,8 +1,8 @@
 import { randomBytes, scrypt as scryptCb, timingSafeEqual, type ScryptOptions } from "node:crypto";
 
 /**
- * Password hashing for the demo login only. Staff passwords are never seen
- * or stored by this app; they are checked by the Platform Engine.
+ * Hashing for the trainer passcode. Only the hash is stored (in a Vercel
+ * Sensitive environment variable); the passcode itself is never stored.
  *
  * Format: scrypt$N$r$p$saltBase64url$hashBase64url
  * scrypt is in Node's standard library, so no extra dependency is needed.

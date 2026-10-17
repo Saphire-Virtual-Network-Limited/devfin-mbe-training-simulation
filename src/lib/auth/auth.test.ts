@@ -3,7 +3,7 @@ import { signToken, verifyToken, type SessionUser } from "./token";
 import { hashPassword, verifyPassword } from "./password";
 
 const secret = "x".repeat(40);
-const user: SessionUser = { id: "staff:MBE-E8CABF", name: "Ada Obi", staffCode: "MBE-E8CABF", role: "mbe", demo: false };
+const user: SessionUser = { id: "MBE-E8CABF", name: "Ada Obi", staffCode: "MBE-E8CABF", role: "mbe", demo: false };
 
 describe("session token", () => {
   it("round-trips a valid token", () => {

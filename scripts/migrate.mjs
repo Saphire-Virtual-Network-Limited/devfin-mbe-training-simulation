@@ -7,20 +7,25 @@ const url = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is not set");
 const sql = neon(url);
 
+// The MBE roster. Sign-in matches code + phone against this table, and every
+// score is linked to the MBE through `code`.
 await sql`
-  CREATE TABLE IF NOT EXISTS trainees (
-    id          TEXT PRIMARY KEY,
+  CREATE TABLE IF NOT EXISTS mbes (
+    code        TEXT PRIMARY KEY,
+    phone       TEXT NOT NULL,
     name        TEXT NOT NULL,
-    staff_code  TEXT NOT NULL,
+    store       TEXT NOT NULL DEFAULT '',
+    active      BOOLEAN NOT NULL DEFAULT true,
     is_demo     BOOLEAN NOT NULL DEFAULT false,
-    first_seen  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    last_seen   TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_seen   TIMESTAMPTZ
   )`;
 
 await sql`
   CREATE TABLE IF NOT EXISTS attempts (
     id           BIGSERIAL PRIMARY KEY,
-    trainee_id   TEXT NOT NULL REFERENCES trainees(id),
+    mbe_code     TEXT NOT NULL REFERENCES mbes(code) ON UPDATE CASCADE,
     scenario_id  TEXT NOT NULL,
     title        TEXT NOT NULL,
     level        TEXT NOT NULL,
@@ -36,7 +41,7 @@ await sql`
     is_demo      BOOLEAN NOT NULL DEFAULT false,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
   )`;
-await sql`CREATE INDEX IF NOT EXISTS attempts_trainee_idx ON attempts (trainee_id, created_at DESC)`;
+await sql`CREATE INDEX IF NOT EXISTS attempts_mbe_idx ON attempts (mbe_code, created_at DESC)`;
 await sql`CREATE INDEX IF NOT EXISTS attempts_created_idx ON attempts (created_at DESC)`;
 
 await sql`

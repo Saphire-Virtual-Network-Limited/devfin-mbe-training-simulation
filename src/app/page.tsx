@@ -10,7 +10,7 @@ export default async function Home() {
   return (
     <main>
       <div className="wrap topline">
-        <span className="small muted">Signed in as {user.name}</span>
+        <span className="small muted">Signed in as {user.name}{user.demo ? "" : ` · ${user.staffCode}`}</span>
         <SignOutButton />
       </div>
       <Simulator user={{ name: user.name, staffId: user.demo ? "" : user.staffCode, isTrainer: user.role === "trainer", isDemo: user.demo }} />

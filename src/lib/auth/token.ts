@@ -4,7 +4,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * Signed session token: base64url(JSON payload) + "." + base64url(HMAC-SHA256).
  *
  * Security decisions:
- * - Signed, not encrypted: the payload holds only a staff code, display name
+ * - Signed, not encrypted: the payload holds only an MBE code, display name
  *   and role, nothing secret. It cannot be altered without the server secret.
  * - Signature compared in constant time.
  * - Expiry is inside the signed payload, so an old cookie stops working even
@@ -14,7 +14,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  */
 
 export interface SessionUser {
-  /** Stable id used as the database key, e.g. "staff:MBE-E8CABF" or "demo:demo". */
+  /** The MBE code, e.g. "MBE-E8CABF". Every saved score is keyed on it. */
   id: string;
   name: string;
   staffCode: string;

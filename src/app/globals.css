@@ -57,7 +57,7 @@ a { color: var(--brand); }
 .stack6, .stack8, .stack10 { display: flex; flex-direction: column; }
 .stack6 { gap: 6px; } .stack8 { gap: 8px; } .stack10 { gap: 10px; }
 .span2 { grid-column: 1 / -1; }
-button, input, select { font: inherit; color: inherit; }
+button, input, select, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
 
 .topline { flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -104,6 +104,7 @@ button, input, select { font: inherit; color: inherit; }
 /* fields */
 .field { display: flex; flex-direction: column; gap: 5px; }
 .field label { font-weight: 600; font-size: 0.9rem; }
+.field textarea { width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 11px 12px; font-family: var(--f-mono); font-size: 0.85rem; resize: vertical; }
 .field input, .field select { width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 11px 12px; min-height: 46px; }
 .field input:focus, .field select:focus { border-color: var(--brand); outline: 2px solid var(--brand-soft); }
 .field .hint, .hint { font-size: 0.78rem; color: var(--muted); }

@@ -6,7 +6,7 @@ import { signToken, verifyToken, type SessionUser } from "./token";
 export type { SessionUser };
 
 const COOKIE = "dfp_session";
-/** Twelve hours: one working day. A staff password change takes effect at the next sign-in. */
+/** Twelve hours: one working day. Switching an MBE off on the roster takes effect at their next sign-in. */
 export const SESSION_TTL_SEC = 12 * 60 * 60;
 
 export async function getSession(): Promise<SessionUser | null> {

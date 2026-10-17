@@ -1,9 +1,9 @@
 import "server-only";
+import { normalizeCode, normalizePhone } from "./mbe-id";
 
 /**
- * Server configuration, read once per request path that needs it. Missing
- * required values fail closed: sign-in is refused rather than running with
- * an insecure default.
+ * Server configuration. Missing required values fail closed: sign-in is
+ * refused rather than running with an insecure default.
  */
 
 export function sessionSecret(): string {
@@ -21,26 +21,32 @@ export function databaseUrl(): string {
 }
 
 export interface DemoConfig {
-  username: string;
-  passwordHash: string;
-  role: "mbe" | "trainer";
+  code: string;
+  phone: string;
 }
 
-/** The always-available test login. Off unless every value is set. */
+/**
+ * The always-available test login: an MBE code and phone number that aren't
+ * a real MBE. It can only practise; it never gets the trainer view.
+ */
 export function demoConfig(): DemoConfig | null {
   if (process.env.DEMO_LOGIN_ENABLED !== "true") return null;
-  const username = (process.env.DEMO_LOGIN_USERNAME ?? "").trim().toLowerCase();
-  const passwordHash = process.env.DEMO_LOGIN_PASSWORD_HASH ?? "";
-  if (!username || !passwordHash) return null;
-  return { username, passwordHash, role: process.env.DEMO_LOGIN_ROLE === "trainer" ? "trainer" : "mbe" };
+  const code = normalizeCode(process.env.DEMO_MBE_CODE);
+  const phone = normalizePhone(process.env.DEMO_MBE_PHONE);
+  return code && phone ? { code, phone } : null;
 }
 
-/** Staff codes (e.g. MBE-E8CABF) allowed into the trainer view. */
+/** MBE codes (e.g. MBE-E8CABF) allowed into the trainer view. */
 export function trainerCodes(): Set<string> {
   return new Set(
-    (process.env.TRAINER_STAFF_CODES ?? "")
+    (process.env.TRAINER_CODES ?? "")
       .split(",")
-      .map((s) => s.trim().toUpperCase())
-      .filter(Boolean),
+      .map((s) => normalizeCode(s))
+      .filter((s): s is string => s !== null),
   );
+}
+
+/** scrypt hash of the passcode trainers enter on top of code and phone. */
+export function trainerPasscodeHash(): string | null {
+  return process.env.TRAINER_PASSCODE_HASH || null;
 }
